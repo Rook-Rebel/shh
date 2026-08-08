@@ -1,69 +1,90 @@
-import Image from "next/image";
+import { Sparkles } from "lucide-react";
+import Header from "@/components/Header";
+import MobileDock from "@/components/MobileDock";
+import FeaturedVideo from "@/components/FeaturedVideo";
+import VideoGrid from "@/components/VideoGrid";
+import GlassPanel from "@/components/ui/GlassPanel";
+import SectionHeader from "@/components/ui/SectionHeader";
+import { getFeaturedVideo, getPublicVideos } from "@/lib/supabase/queries";
+import { getCurrentYear } from "@/lib/getCurrentYear";
 
-export default function Home() {
+export default async function Home() {
+  const featured = await getFeaturedVideo();
+  const publicVideos = await getPublicVideos();
+  const latest = featured
+    ? publicVideos.filter((video) => video.id !== featured.id)
+    : publicVideos;
+
+  const recentVideos = latest.slice(0, 6);
+  const olderVideos = latest.slice(6);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <>
+      <Header videos={publicVideos} />
+      <main className="page-enter mx-auto w-full max-w-6xl flex-1 px-6 pt-10 sm:pt-14">
+        <div className="relative mx-auto mb-10 flex max-w-lg flex-col items-center pt-2 text-center sm:mb-14">
+          <span
+            aria-hidden
+            className="glint absolute -top-1 right-[30%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-rose-200 to-violet-200 blur-[1px]"
+          />
+          <span className="text-xs tracking-wide text-ink-soft/70">just between us 🤏</span>
+          <h1
+            aria-label="shh."
+            className="mt-3 bg-gradient-to-r from-rose-200 via-fuchsia-200 to-violet-200 bg-clip-text text-4xl font-medium tracking-tight text-transparent sm:text-5xl"
+          >
+            shh.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+          <p className="mt-3 text-sm text-ink-soft/70">some things are better kept here.</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {publicVideos.length === 0 ? (
+          <GlassPanel
+            intensity="soft"
+            className="mx-auto flex max-w-md flex-col items-center justify-center px-10 py-20 text-center"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+            <div className="mb-4 rounded-full border border-white/10 bg-white/5 p-4">
+              <Sparkles size={22} strokeWidth={1.5} className="text-rose-200/60" />
+            </div>
+            <p className="text-lg text-zinc-400">quiet in here.</p>
+            <p className="mt-1.5 text-sm text-zinc-600">for now.</p>
+          </GlassPanel>
+        ) : (
+          <>
+            {featured && (
+              <section className="mb-20 sm:mb-24">
+                <FeaturedVideo video={featured} />
+              </section>
+            )}
+
+            {recentVideos.length > 0 && (
+              <section id="recently" className="scroll-mt-28">
+                <SectionHeader>recently 🤏</SectionHeader>
+                <VideoGrid videos={recentVideos} spotlightFirst />
+              </section>
+            )}
+
+            {olderVideos.length > 0 && (
+              <>
+                <div aria-hidden className="my-16 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent sm:my-20" />
+                <section>
+                  <SectionHeader>older</SectionHeader>
+                  <VideoGrid videos={olderVideos} />
+                </section>
+              </>
+            )}
+          </>
+        )}
       </main>
-    </div>
+
+      <footer className="mx-auto w-full max-w-6xl px-6 pb-28 pt-4 text-center sm:pb-16">
+        <div className="mx-auto h-px w-16 bg-white/10" />
+        <p className="mt-6 bg-gradient-to-r from-rose-200/70 via-fuchsia-200/70 to-violet-200/70 bg-clip-text text-sm font-medium text-transparent">
+          shh. 🤏
+        </p>
+        <p className="mt-1.5 text-xs text-zinc-600">keep it between us. · {getCurrentYear()}</p>
+      </footer>
+
+      <MobileDock videos={publicVideos} />
+    </>
   );
 }

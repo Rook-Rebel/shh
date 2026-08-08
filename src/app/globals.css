@@ -1,26 +1,225 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: #f3eee8;
+  --color-ink-soft: #b6acc4;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: rgba(243, 184, 200, 0.25);
+}
+
+:focus-visible {
+  outline: 2px solid rgba(198, 180, 255, 0.6);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(198, 180, 255, 0.16);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(198, 180, 255, 0.28);
+  background-clip: content-box;
+}
+
+/* ---- Ambient background: grain + vignette + slow atmospheric drift ---- */
+
+.grain-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+}
+
+.vignette-overlay {
+  background: radial-gradient(ellipse 90% 70% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .blob-drift-a {
+    animation: blob-drift-a 60s ease-in-out infinite;
+  }
+  .blob-drift-b {
+    animation: blob-drift-b 75s ease-in-out infinite;
+  }
+  .blob-drift-c {
+    animation: blob-drift-c 50s ease-in-out infinite;
+  }
+}
+
+@keyframes blob-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(4%, 5%) scale(1.1); }
+}
+
+@keyframes blob-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-5%, 4%) scale(1.06); }
+}
+
+@keyframes blob-drift-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(3%, -4%) scale(1.12); }
+}
+
+/* ---- Like button pop ---- */
+
+@keyframes like-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .like-pop {
+    animation: like-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+/* ---- Indeterminate upload progress ---- */
+
+@keyframes indeterminate-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .indeterminate-bar {
+    animation: indeterminate-bar 1.2s ease-in-out infinite;
+  }
+}
+
+/* ---- Thumbnail loading shimmer ---- */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.02) 75%
+  );
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+  }
+}
+
+/* ---- Sheen: a soft light sweep for glass hovers ---- */
+
+.sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.16) 50%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 750ms ease;
+  pointer-events: none;
+}
+
+.sheen:hover::after {
+  transform: translateX(120%);
+}
+
+.sheen-accent::after {
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(243, 184, 200, 0.14) 48%,
+    rgba(198, 180, 255, 0.14) 58%,
+    transparent 68%
+  );
+}
+
+/* ---- Page entrance ---- */
+
+@keyframes page-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes panel-fade-scale {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter {
+    animation: page-fade-up 550ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .panel-enter {
+    animation: panel-fade-scale 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* ---- Hero glint ---- */
+
+@keyframes glint-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 0.9; transform: scale(1.15); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .glint {
+    animation: glint-pulse 4s ease-in-out infinite;
+  }
+}
+
+/* ---- Secret detail: hold the logo for a moment ---- */
+
+.logo-glint {
+  opacity: 0;
+  transition: opacity 350ms ease 0ms;
+}
+
+.group:hover .logo-glint {
+  opacity: 0.8;
+  transition-delay: 850ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
