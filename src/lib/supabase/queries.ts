@@ -13,7 +13,10 @@ export async function getPublicVideos(): Promise<Video[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error(error);
+    // A reachability/config error here is expected whenever Supabase isn't
+    // connected yet — warn (not error) so it doesn't trip Next's dev
+    // overlay for a condition the app already handles gracefully.
+    console.warn(error);
     return [];
   }
   return data ?? [];
@@ -47,7 +50,10 @@ export async function getAllVideosForAdmin(): Promise<Video[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error(error);
+    // A reachability/config error here is expected whenever Supabase isn't
+    // connected yet — warn (not error) so it doesn't trip Next's dev
+    // overlay for a condition the app already handles gracefully.
+    console.warn(error);
     return [];
   }
   return data ?? [];

@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "react";
 import Image from "next/image";
 import { ImagePlus, Upload, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { uploadToBucket } from "@/lib/supabase/storage";
+import { createVideoAction, updateVideoAction } from "@/app/admin/videoActions";
 import GlassButton from "@/components/ui/GlassButton";
 import { cn } from "@/lib/cn";
 import type { Video, Visibility } from "@/types/video";
@@ -63,33 +62,29 @@ export default function VideoForm({
     setSaving(true);
 
     try {
-      const supabase = createClient();
-      if (!supabase) throw new Error("admin isn't connected yet.");
+      const formData = new FormData();
+      formData.set("title", title);
+      formData.set("description", description);
+      formData.set("visibility", visibility);
+      formData.set("featured", String(featured));
+      if (videoFile) formData.set("video", videoFile);
+      if (thumbnailFile) formData.set("thumbnail", thumbnailFile);
 
-      const thumbnail_url = thumbnailFile
-        ? await uploadToBucket("thumbnails", thumbnailFile)
-        : (video?.thumbnail_url ?? "");
-
-      const video_url = videoFile
-        ? await uploadToBucket("videos", videoFile)
-        : (video?.video_url ?? "");
-
-      const payload = { title, description, thumbnail_url, video_url, featured, visibility };
-
-      const { data, error: saveError } = isEditing
-        ? await supabase.from("videos").update(payload).eq("id", video!.id).select().single()
-        : await supabase.from("videos").insert(payload).select().single();
-
-      if (saveError) throw saveError;
-
-      const saved = data as Video;
-
-      // Only one video should ever be featured — quietly un-feature the rest.
-      if (saved.featured) {
-        await supabase.from("videos").update({ featured: false }).neq("id", saved.id);
+      let result;
+      if (isEditing) {
+        formData.set("id", video!.id);
+        formData.set("existingVideoUrl", video?.video_url ?? "");
+        formData.set("existingThumbnailUrl", video?.thumbnail_url ?? "");
+        result = await updateVideoAction(formData);
+      } else {
+        result = await createVideoAction(formData);
       }
 
-      onSaved(saved);
+      if (result.error || !result.video) {
+        throw new Error(result.error ?? "something went wrong. please try again.");
+      }
+
+      onSaved(result.video);
     } catch (err) {
       setError(err instanceof Error ? err.message : "something went wrong. please try again.");
     } finally {

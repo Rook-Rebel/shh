@@ -31,13 +31,16 @@ If you'd rather click through the UI instead: **Table Editor** → create `video
 ## 4. Add environment variables
 
 1. In Supabase: **Project Settings** → **API**.
-2. Copy the **Project URL** and the **anon public** key.
+2. Copy the **Project URL**, the **publishable** key, and the **service_role** secret key.
 3. Create `.env.local` in the project root (copy `.env.example`):
 
    ```bash
    NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
    ```
+
+The admin (you) logs in with a custom session cookie, not Supabase Auth, so the browser is never treated as an "authenticated" Supabase role — by design, anon can only read. `SUPABASE_SERVICE_ROLE_KEY` is what lets the server actually save/delete videos on your behalf after checking your admin session. It's server-only: never prefixed with `NEXT_PUBLIC_`, never sent to the browser, and never committed.
 
 Never commit `.env.local` — it's already in `.gitignore`.
 
@@ -63,7 +66,7 @@ Open [http://localhost:3000](http://localhost:3000) for the public site, or [htt
 
 1. Push this project to a GitHub repository.
 2. Import the repository in [Vercel](https://vercel.com/new).
-3. In the Vercel project's **Environment Variables** settings, add the same two variables from `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`).
+3. In the Vercel project's **Environment Variables** settings, add the same two variables from `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`).
 4. Deploy.
 5. (Optional) Point your `shh.ge` domain at the Vercel project under **Domains**.
 

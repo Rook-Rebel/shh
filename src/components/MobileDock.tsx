@@ -30,7 +30,17 @@ export default function MobileDock({ videos }: { videos: Video[] }) {
   return (
     <>
       <nav className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] z-40 flex justify-center px-6 sm:hidden">
-        <div className={cn("flex items-center gap-1 rounded-full bg-zinc-950/70 px-2 py-2", glassIntensity.heavy)}>
+        <div
+          className={cn(
+            "relative flex items-center gap-1 rounded-full bg-zinc-950/70 px-2 py-2",
+            glassIntensity.heavy
+          )}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-200/25 to-transparent"
+          />
+
           <Link
             href="/"
             aria-label="Home"

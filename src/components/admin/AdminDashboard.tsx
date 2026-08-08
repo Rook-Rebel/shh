@@ -7,8 +7,7 @@ import AdminVideoCard from "@/components/admin/AdminVideoCard";
 import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 import GlassPanel from "@/components/ui/GlassPanel";
 import GlassButton from "@/components/ui/GlassButton";
-import { createClient } from "@/lib/supabase/client";
-import { removeFromBucket } from "@/lib/supabase/storage";
+import { deleteVideoAction } from "@/app/admin/videoActions";
 import type { Video } from "@/types/video";
 
 export default function AdminDashboard({ initialVideos }: { initialVideos: Video[] }) {
@@ -51,22 +50,13 @@ export default function AdminDashboard({ initialVideos }: { initialVideos: Video
     if (!video) return;
     setDeletingVideo(null);
 
-    const supabase = createClient();
-    if (!supabase) {
-      alert("admin isn't connected yet.");
-      return;
-    }
-
-    const { error } = await supabase.from("videos").delete().eq("id", video.id);
-    if (error) {
+    const result = await deleteVideoAction(video.id, video.video_url, video.thumbnail_url);
+    if (result.error) {
       alert("Couldn't delete this video. Please try again.");
       return;
     }
 
     setVideos((prev) => prev.filter((v) => v.id !== video.id));
-
-    if (video.thumbnail_url) await removeFromBucket("thumbnails", video.thumbnail_url);
-    if (video.video_url) await removeFromBucket("videos", video.video_url);
   }
 
   return (
@@ -78,7 +68,7 @@ export default function AdminDashboard({ initialVideos }: { initialVideos: Video
         {!formOpen && (
           <GlassButton variant="primary" onClick={openNewForm} className="sheen">
             <Plus size={16} strokeWidth={2} />
-            upload
+            new video
           </GlassButton>
         )}
       </div>

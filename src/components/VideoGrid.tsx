@@ -1,4 +1,5 @@
 import VideoCard from "@/components/VideoCard";
+import { cn } from "@/lib/cn";
 import type { Video } from "@/types/video";
 
 export default function VideoGrid({
@@ -15,9 +16,17 @@ export default function VideoGrid({
   const showSpotlight = spotlightFirst && videos.length >= 3;
 
   return (
-    <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="-mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-6 pb-2 sm:gap-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-x-6 lg:gap-y-10 lg:overflow-visible lg:px-0 lg:pb-0">
       {videos.map((video, index) => (
-        <VideoCard key={video.id} video={video} large={showSpotlight && index === 0} />
+        <div
+          key={video.id}
+          className={cn(
+            "w-[72vw] max-w-[320px] shrink-0 snap-start sm:w-[42vw] sm:max-w-[360px] lg:w-auto lg:max-w-none",
+            showSpotlight && index === 0 && "lg:col-span-2"
+          )}
+        >
+          <VideoCard video={video} showGlint={index % 3 === 1} />
+        </div>
       ))}
     </div>
   );

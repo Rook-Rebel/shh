@@ -1,5 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
-import { Pencil, Star, Trash2 } from "lucide-react";
+import { Check, Link2, Pencil, Star, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/formatDate";
 import { cn } from "@/lib/cn";
 import type { Video } from "@/types/video";
@@ -13,6 +16,19 @@ export default function AdminVideoCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopyLink() {
+    const url = `${window.location.origin}/watch/${video.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access unavailable — silently ignore.
+    }
+  }
+
   return (
     <div className="group overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl transition-colors hover:border-white/20">
       <div className="shimmer relative aspect-video bg-zinc-900">
@@ -58,6 +74,13 @@ export default function AdminVideoCard({
 
         <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/40 group-hover:opacity-100">
           <button
+            onClick={handleCopyLink}
+            aria-label="Copy share link"
+            className="rounded-full border border-white/20 bg-white/10 p-2.5 text-zinc-100 backdrop-blur-md transition-colors hover:bg-white/20"
+          >
+            {copied ? <Check size={15} strokeWidth={1.75} /> : <Link2 size={15} strokeWidth={1.75} />}
+          </button>
+          <button
             onClick={onEdit}
             aria-label="Edit video"
             className="rounded-full border border-white/20 bg-white/10 p-2.5 text-zinc-100 backdrop-blur-md transition-colors hover:bg-white/20"
@@ -72,6 +95,12 @@ export default function AdminVideoCard({
             <Trash2 size={15} strokeWidth={1.75} />
           </button>
         </div>
+
+        {copied && (
+          <span className="absolute bottom-3 right-3 rounded-full border border-white/10 bg-black/70 px-2.5 py-1 text-[11px] font-medium text-zinc-200 backdrop-blur-sm">
+            link copied
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-1 p-4">

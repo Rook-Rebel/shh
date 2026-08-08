@@ -67,7 +67,7 @@ export default async function Home() {
               <>
                 <div aria-hidden className="my-16 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent sm:my-20" />
                 <section>
-                  <SectionHeader>older</SectionHeader>
+                  <SectionHeader>more evidence</SectionHeader>
                   <VideoGrid videos={olderVideos} />
                 </section>
               </>
@@ -79,7 +79,7 @@ export default async function Home() {
       <footer className="mx-auto w-full max-w-6xl px-6 pb-28 pt-4 text-center sm:pb-16">
         <div className="mx-auto h-px w-16 bg-white/10" />
         <p className="mt-6 bg-gradient-to-r from-rose-200/70 via-fuchsia-200/70 to-violet-200/70 bg-clip-text text-sm font-medium text-transparent">
-          shh. 🤏
+          shh.
         </p>
         <p className="mt-1.5 text-xs text-zinc-600">keep it between us. · {getCurrentYear()}</p>
       </footer>

@@ -68,7 +68,7 @@ export default function Search({
           {query.trim() === "" ? (
             <p className="py-14 text-center text-sm text-zinc-600">start typing to search</p>
           ) : results.length === 0 ? (
-            <p className="py-14 text-center text-sm text-zinc-600">nothing. suspicious. 🤏</p>
+            <p className="py-14 text-center text-sm text-zinc-600">nothing. suspicious.</p>
           ) : (
             <ul className="flex flex-col gap-1">
               {results.map((video) => (

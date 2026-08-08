@@ -1,5 +1,8 @@
-import { createClient } from "@/lib/supabase/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 
+// Server-only — writes here use the service_role admin client, which
+// bypasses RLS. Only call these from Server Actions that have already
+// verified the admin session.
 export type StorageBucket = "videos" | "thumbnails";
 
 // Public Supabase Storage URLs look like:
@@ -14,8 +17,8 @@ export function parseStoragePath(url: string, bucket: StorageBucket): string | n
 }
 
 export async function uploadToBucket(bucket: StorageBucket, file: File): Promise<string> {
-  const supabase = createClient();
-  if (!supabase) throw new Error("admin isn't connected yet.");
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("storage isn't connected yet.");
 
   const extension = file.name.split(".").pop();
   const path = `${crypto.randomUUID()}${extension ? `.${extension}` : ""}`;
@@ -34,9 +37,9 @@ export async function removeFromBucket(bucket: StorageBucket, url: string): Prom
   const path = parseStoragePath(url, bucket);
   if (!path) return;
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
   if (!supabase) return;
 
   const { error } = await supabase.storage.from(bucket).remove([path]);
-  if (error) console.error(error);
+  if (error) console.warn(error);
 }

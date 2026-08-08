@@ -4,19 +4,21 @@ import { Play } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/formatDate";
 import { isRecent } from "@/lib/isRecent";
-import { cn } from "@/lib/cn";
 import type { Video } from "@/types/video";
 
-export default function VideoCard({ video, large = false }: { video: Video; large?: boolean }) {
+export default function VideoCard({
+  video,
+  showGlint = false,
+}: {
+  video: Video;
+  showGlint?: boolean;
+}) {
   const isNew = isRecent(video.created_at);
 
   return (
     <Link
       href={`/watch/${video.id}`}
-      className={cn(
-        "group flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1",
-        large && "lg:col-span-2"
-      )}
+      className="group flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1"
     >
       <div className="shimmer relative aspect-video overflow-hidden rounded-[22px] border border-white/10 bg-zinc-900 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] transition-all duration-300 group-hover:border-rose-200/25 group-hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_20px_45px_-18px_rgba(216,170,220,0.35)] sm:rounded-3xl">
         {video.thumbnail_url ? (
@@ -53,6 +55,15 @@ export default function VideoCard({ video, large = false }: { video: Video; larg
           <div className="absolute right-2.5 top-2.5">
             <Badge tone="accent">featured</Badge>
           </div>
+        )}
+
+        {showGlint && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-2.5 right-2.5 text-sm opacity-0 transition-opacity duration-300 group-hover:opacity-70"
+          >
+            🤏
+          </span>
         )}
       </div>
 

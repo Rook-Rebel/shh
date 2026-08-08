@@ -1,23 +1,17 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { ADMIN_SESSION_COOKIE, isValidSessionToken } from "@/lib/adminSession";
 import { getAllVideosForAdmin } from "@/lib/supabase/queries";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import LogoutButton from "@/components/admin/LogoutButton";
 
 export default async function AdminPage() {
-  const supabase = await createClient();
-
-  // Middleware already redirects when Supabase isn't configured or the
-  // visitor isn't signed in — these are defense-in-depth checks in case
-  // the page is ever reached another way.
-  if (!supabase) redirect("/admin/login");
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/admin/login");
+  // Proxy already redirects signed-out visitors — this is a defense-in-depth
+  // check in case the page is ever reached another way.
+  const cookieStore = await cookies();
+  const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
+  if (!isValidSessionToken(session)) redirect("/admin/login");
 
   const videos = await getAllVideosForAdmin();
 
@@ -28,12 +22,11 @@ export default async function AdminPage() {
           <Link
             href="/"
             aria-label="shh."
-            className="bg-gradient-to-r from-rose-200 via-fuchsia-200 to-violet-200 bg-clip-text text-2xl font-medium tracking-tight text-transparent"
+            className="bg-gradient-to-r from-rose-200 via-fuchsia-200 to-violet-200 bg-clip-text text-lg font-medium tracking-tight text-transparent"
           >
             <span aria-hidden="true">shh.</span>
           </Link>
-          <p className="mt-2 text-sm font-medium text-ink-soft/70">the secret room</p>
-          <p className="mt-0.5 text-xs text-zinc-600">you know what to do.</p>
+          <h1 className="mt-2 text-2xl font-medium text-ink">Admin Panel</h1>
         </div>
         <LogoutButton />
       </div>
