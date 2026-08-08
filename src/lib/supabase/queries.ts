@@ -4,6 +4,8 @@ import type { Video } from "@/types/video";
 // Public visitors only ever see "public" videos through these two helpers.
 export async function getPublicVideos(): Promise<Video[]> {
   const supabase = await createClient();
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("videos")
     .select("*")
@@ -26,6 +28,8 @@ export async function getFeaturedVideo(): Promise<Video | null> {
 // makes unlisted links work. Only reachable if you already know the id.
 export async function getVideoById(id: string): Promise<Video | null> {
   const supabase = await createClient();
+  if (!supabase) return null;
+
   const { data, error } = await supabase.from("videos").select("*").eq("id", id).maybeSingle();
 
   if (error || !data) return null;
@@ -35,6 +39,8 @@ export async function getVideoById(id: string): Promise<Video | null> {
 // Admin-only: every video regardless of visibility, for the dashboard.
 export async function getAllVideosForAdmin(): Promise<Video[]> {
   const supabase = await createClient();
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("videos")
     .select("*")

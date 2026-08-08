@@ -7,12 +7,16 @@ import LogoutButton from "@/components/admin/LogoutButton";
 
 export default async function AdminPage() {
   const supabase = await createClient();
+
+  // Middleware already redirects when Supabase isn't configured or the
+  // visitor isn't signed in — these are defense-in-depth checks in case
+  // the page is ever reached another way.
+  if (!supabase) redirect("/admin/login");
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Middleware already redirects unauthenticated visitors — this is a
-  // defense-in-depth check in case the page is ever reached another way.
   if (!user) redirect("/admin/login");
 
   const videos = await getAllVideosForAdmin();

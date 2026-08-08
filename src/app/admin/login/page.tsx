@@ -21,6 +21,12 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
+    if (!supabase) {
+      setError("admin isn't connected yet.");
+      setLoading(false);
+      return;
+    }
+
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (signInError) {

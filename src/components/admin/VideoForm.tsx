@@ -64,6 +64,7 @@ export default function VideoForm({
 
     try {
       const supabase = createClient();
+      if (!supabase) throw new Error("admin isn't connected yet.");
 
       const thumbnail_url = thumbnailFile
         ? await uploadToBucket("thumbnails", thumbnailFile)

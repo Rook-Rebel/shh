@@ -15,6 +15,8 @@ export function parseStoragePath(url: string, bucket: StorageBucket): string | n
 
 export async function uploadToBucket(bucket: StorageBucket, file: File): Promise<string> {
   const supabase = createClient();
+  if (!supabase) throw new Error("admin isn't connected yet.");
+
   const extension = file.name.split(".").pop();
   const path = `${crypto.randomUUID()}${extension ? `.${extension}` : ""}`;
 
@@ -33,6 +35,8 @@ export async function removeFromBucket(bucket: StorageBucket, url: string): Prom
   if (!path) return;
 
   const supabase = createClient();
+  if (!supabase) return;
+
   const { error } = await supabase.storage.from(bucket).remove([path]);
   if (error) console.error(error);
 }

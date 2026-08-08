@@ -52,6 +52,11 @@ export default function AdminDashboard({ initialVideos }: { initialVideos: Video
     setDeletingVideo(null);
 
     const supabase = createClient();
+    if (!supabase) {
+      alert("admin isn't connected yet.");
+      return;
+    }
+
     const { error } = await supabase.from("videos").delete().eq("id", video.id);
     if (error) {
       alert("Couldn't delete this video. Please try again.");
