@@ -3,24 +3,48 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/lib/adminSession";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { removeFromBucket, uploadToBucket } from "@/lib/supabase/storage";
+import { removeFromBucket } from "@/lib/supabase/storage";
 import type { Video, Visibility } from "@/types/video";
 
-// All video writes live here, gated behind requireAdminSession(). The
-// browser only ever talks to Supabase with the publishable key, which can
-// read but — by RLS design — can't write, so every insert/update/delete has
-// to go through one of these instead.
+// All video writes live here, gated behind requireAdminSession(). Video and
+// thumbnail bytes never reach these actions — the browser uploads them
+// straight to Supabase Storage first (see uploadActions.ts), and only the
+// resulting storage paths are passed in here to build the database row.
 
 export interface VideoActionResult {
   video?: Video;
   error?: string;
 }
 
-function readVisibility(formData: FormData): Visibility {
-  return formData.get("visibility") === "unlisted" ? "unlisted" : "public";
+interface VideoMetadata {
+  title: string;
+  description: string;
+  visibility: Visibility;
+  featured: boolean;
 }
 
-export async function createVideoAction(formData: FormData): Promise<VideoActionResult> {
+export interface CreateVideoInput extends VideoMetadata {
+  videoPath: string;
+  thumbnailPath: string;
+}
+
+export interface UpdateVideoInput extends VideoMetadata {
+  id: string;
+  videoPath?: string;
+  thumbnailPath?: string;
+  existingVideoUrl: string;
+  existingThumbnailUrl: string;
+}
+
+// Only one video should ever be featured — quietly un-feature the rest.
+async function unfeatureOthers(
+  supabase: NonNullable<ReturnType<typeof createAdminClient>>,
+  savedId: string
+): Promise<void> {
+  await supabase.from("videos").update({ featured: false }).neq("id", savedId);
+}
+
+export async function createVideoAction(input: CreateVideoInput): Promise<VideoActionResult> {
   try {
     await requireAdminSession();
   } catch {
@@ -30,52 +54,39 @@ export async function createVideoAction(formData: FormData): Promise<VideoAction
   const supabase = createAdminClient();
   if (!supabase) return { error: "storage isn't connected yet." };
 
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "");
-  const visibility = readVisibility(formData);
-  const featured = formData.get("featured") === "true";
-  const videoFile = formData.get("video");
-  const thumbnailFile = formData.get("thumbnail");
-
+  const title = input.title.trim();
   if (!title) return { error: "a title is required." };
-  if (!(videoFile instanceof File) || videoFile.size === 0) {
-    return { error: "a video file is required." };
-  }
-  if (!(thumbnailFile instanceof File) || thumbnailFile.size === 0) {
-    return { error: "a thumbnail is required." };
-  }
+  if (!input.videoPath) return { error: "a video file is required." };
+  if (!input.thumbnailPath) return { error: "a thumbnail is required." };
 
-  try {
-    const [video_url, thumbnail_url] = await Promise.all([
-      uploadToBucket("videos", videoFile),
-      uploadToBucket("thumbnails", thumbnailFile),
-    ]);
+  const video_url = supabase.storage.from("videos").getPublicUrl(input.videoPath).data.publicUrl;
+  const thumbnail_url = supabase.storage.from("thumbnails").getPublicUrl(input.thumbnailPath).data.publicUrl;
 
-    const { data, error } = await supabase
-      .from("videos")
-      .insert({ title, description, video_url, thumbnail_url, featured, visibility })
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from("videos")
+    .insert({
+      title,
+      description: input.description,
+      video_url,
+      thumbnail_url,
+      featured: input.featured,
+      visibility: input.visibility,
+    })
+    .select()
+    .single();
 
-    if (error) return { error: error.message };
+  if (error) return { error: error.message };
 
-    const saved = data as Video;
+  const saved = data as Video;
+  if (saved.featured) await unfeatureOthers(supabase, saved.id);
 
-    // Only one video should ever be featured — quietly un-feature the rest.
-    if (saved.featured) {
-      await supabase.from("videos").update({ featured: false }).neq("id", saved.id);
-    }
-
-    revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath(`/watch/${saved.id}`);
-    return { video: saved };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "something went wrong. please try again." };
-  }
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath(`/watch/${saved.id}`);
+  return { video: saved };
 }
 
-export async function updateVideoAction(formData: FormData): Promise<VideoActionResult> {
+export async function updateVideoAction(input: UpdateVideoInput): Promise<VideoActionResult> {
   try {
     await requireAdminSession();
   } catch {
@@ -85,53 +96,40 @@ export async function updateVideoAction(formData: FormData): Promise<VideoAction
   const supabase = createAdminClient();
   if (!supabase) return { error: "storage isn't connected yet." };
 
-  const id = String(formData.get("id") ?? "");
-  if (!id) return { error: "missing video id." };
-
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "");
-  const visibility = readVisibility(formData);
-  const featured = formData.get("featured") === "true";
-  const videoFile = formData.get("video");
-  const thumbnailFile = formData.get("thumbnail");
-  const existingVideoUrl = String(formData.get("existingVideoUrl") ?? "");
-  const existingThumbnailUrl = String(formData.get("existingThumbnailUrl") ?? "");
-
+  const title = input.title.trim();
   if (!title) return { error: "a title is required." };
+  if (!input.id) return { error: "missing video id." };
 
-  try {
-    const video_url =
-      videoFile instanceof File && videoFile.size > 0
-        ? await uploadToBucket("videos", videoFile)
-        : existingVideoUrl;
+  const video_url = input.videoPath
+    ? supabase.storage.from("videos").getPublicUrl(input.videoPath).data.publicUrl
+    : input.existingVideoUrl;
+  const thumbnail_url = input.thumbnailPath
+    ? supabase.storage.from("thumbnails").getPublicUrl(input.thumbnailPath).data.publicUrl
+    : input.existingThumbnailUrl;
 
-    const thumbnail_url =
-      thumbnailFile instanceof File && thumbnailFile.size > 0
-        ? await uploadToBucket("thumbnails", thumbnailFile)
-        : existingThumbnailUrl;
+  const { data, error } = await supabase
+    .from("videos")
+    .update({
+      title,
+      description: input.description,
+      video_url,
+      thumbnail_url,
+      featured: input.featured,
+      visibility: input.visibility,
+    })
+    .eq("id", input.id)
+    .select()
+    .single();
 
-    const { data, error } = await supabase
-      .from("videos")
-      .update({ title, description, video_url, thumbnail_url, featured, visibility })
-      .eq("id", id)
-      .select()
-      .single();
+  if (error) return { error: error.message };
 
-    if (error) return { error: error.message };
+  const saved = data as Video;
+  if (saved.featured) await unfeatureOthers(supabase, saved.id);
 
-    const saved = data as Video;
-
-    if (saved.featured) {
-      await supabase.from("videos").update({ featured: false }).neq("id", saved.id);
-    }
-
-    revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath(`/watch/${saved.id}`);
-    return { video: saved };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "something went wrong. please try again." };
-  }
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath(`/watch/${saved.id}`);
+  return { video: saved };
 }
 
 export async function deleteVideoAction(

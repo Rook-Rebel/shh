@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "re
 import Image from "next/image";
 import { ImagePlus, Upload, X } from "lucide-react";
 import { createVideoAction, updateVideoAction } from "@/app/admin/videoActions";
+import { cleanupOrphanedUploadAction } from "@/app/admin/uploadActions";
+import { uploadDirect } from "@/lib/supabase/directUpload";
 import GlassButton from "@/components/ui/GlassButton";
 import { cn } from "@/lib/cn";
 import type { Video, Visibility } from "@/types/video";
@@ -27,8 +29,9 @@ export default function VideoForm({
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [draggingThumb, setDraggingThumb] = useState(false);
   const [draggingVideo, setDraggingVideo] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [stage, setStage] = useState<"idle" | "video" | "thumbnail" | "publishing">("idle");
   const [error, setError] = useState("");
+  const saving = stage !== "idle";
 
   const thumbnailPreview = useMemo(() => {
     if (thumbnailFile) return URL.createObjectURL(thumbnailFile);
@@ -58,29 +61,60 @@ export default function VideoForm({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     setError("");
-    setSaving(true);
+
+    if (!isEditing && !videoFile) {
+      setError("a video file is required.");
+      return;
+    }
+    if (!isEditing && !thumbnailFile) {
+      setError("a thumbnail is required.");
+      return;
+    }
+
+    let uploadedVideoPath: string | undefined;
+    let uploadedThumbnailPath: string | undefined;
 
     try {
-      const formData = new FormData();
-      formData.set("title", title);
-      formData.set("description", description);
-      formData.set("visibility", visibility);
-      formData.set("featured", String(featured));
-      if (videoFile) formData.set("video", videoFile);
-      if (thumbnailFile) formData.set("thumbnail", thumbnailFile);
-
-      let result;
-      if (isEditing) {
-        formData.set("id", video!.id);
-        formData.set("existingVideoUrl", video?.video_url ?? "");
-        formData.set("existingThumbnailUrl", video?.thumbnail_url ?? "");
-        result = await updateVideoAction(formData);
-      } else {
-        result = await createVideoAction(formData);
+      if (videoFile) {
+        setStage("video");
+        uploadedVideoPath = (await uploadDirect("videos", videoFile)).path;
       }
 
+      if (thumbnailFile) {
+        setStage("thumbnail");
+        try {
+          uploadedThumbnailPath = (await uploadDirect("thumbnails", thumbnailFile)).path;
+        } catch (err) {
+          if (uploadedVideoPath) await cleanupOrphanedUploadAction(uploadedVideoPath, undefined);
+          throw err;
+        }
+      }
+
+      setStage("publishing");
+
+      const metadata = { title, description, visibility, featured };
+
+      const result = isEditing
+        ? await updateVideoAction({
+            ...metadata,
+            id: video!.id,
+            videoPath: uploadedVideoPath,
+            thumbnailPath: uploadedThumbnailPath,
+            existingVideoUrl: video?.video_url ?? "",
+            existingThumbnailUrl: video?.thumbnail_url ?? "",
+          })
+        : await createVideoAction({
+            ...metadata,
+            videoPath: uploadedVideoPath!,
+            thumbnailPath: uploadedThumbnailPath!,
+          });
+
       if (result.error || !result.video) {
+        if (uploadedVideoPath || uploadedThumbnailPath) {
+          await cleanupOrphanedUploadAction(uploadedVideoPath, uploadedThumbnailPath);
+        }
         throw new Error(result.error ?? "something went wrong. please try again.");
       }
 
@@ -88,7 +122,7 @@ export default function VideoForm({
     } catch (err) {
       setError(err instanceof Error ? err.message : "something went wrong. please try again.");
     } finally {
-      setSaving(false);
+      setStage("idle");
     }
   }
 
@@ -251,7 +285,11 @@ export default function VideoForm({
 
       {saving && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs text-zinc-500">uploading…</p>
+          <p className="text-xs text-zinc-500">
+            {stage === "video" && "uploading video…"}
+            {stage === "thumbnail" && "uploading thumbnail…"}
+            {stage === "publishing" && "publishing…"}
+          </p>
           <div className="h-1 w-full overflow-hidden rounded-full bg-white/5">
             <div className="indeterminate-bar h-full w-1/3 rounded-full bg-gradient-to-r from-rose-300 to-violet-300" />
           </div>
@@ -259,11 +297,14 @@ export default function VideoForm({
       )}
 
       <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-6">
-        <GlassButton type="button" variant="ghost" onClick={onCancel}>
+        <GlassButton type="button" variant="ghost" onClick={onCancel} disabled={saving}>
           cancel
         </GlassButton>
         <GlassButton type="submit" variant="primary" disabled={saving} className="sheen">
-          {saving ? "uploading…" : isEditing ? "save changes" : "publish"}
+          {stage === "video" && "uploading video…"}
+          {stage === "thumbnail" && "uploading thumbnail…"}
+          {stage === "publishing" && "publishing…"}
+          {!saving && (isEditing ? "save changes" : "publish")}
         </GlassButton>
       </div>
     </form>
